@@ -3,7 +3,7 @@
 import { useState } from "react";
 import type { Session } from "@/lib/types";
 import type { PermissionState } from "@/lib/notifications";
-import { projeterService } from "@/lib/schedule";
+import { projeterService, projeterServiceDepuisDebut } from "@/lib/schedule";
 import { formatCompteARebours, formatHeure, formatJour, formatJourHeure } from "@/lib/format";
 import { Banner, Button, Card } from "./ui";
 
@@ -15,6 +15,7 @@ export default function Planning({
   onAnnuler,
   onAdmin,
   onValider,
+  onDemarrer,
 }: {
   session: Session;
   now: Date;
@@ -23,9 +24,11 @@ export default function Planning({
   onAnnuler: () => void;
   onAdmin: () => void;
   onValider: () => void;
+  onDemarrer: () => void;
 }) {
   const [confirmAnnuler, setConfirmAnnuler] = useState(false);
   const [confirmValider, setConfirmValider] = useState(false);
+  const [confirmDemarrer, setConfirmDemarrer] = useState(false);
 
   const courante = session.etapes[session.etape_courante];
   const toutTermine = session.etapes.every((e) => e.statut === "done");
@@ -97,9 +100,13 @@ export default function Planning({
               Voir les instructions de pétrissage
             </Button>
           )}
-          {enCours && (
+          {enCours ? (
             <Button onClick={() => setConfirmValider(true)} className="mt-3 w-full">
               ✓ J&apos;ai terminé — étape suivante
+            </Button>
+          ) : (
+            <Button onClick={() => setConfirmDemarrer(true)} className="mt-3 w-full">
+              ▶ Commencer maintenant
             </Button>
           )}
         </Card>
@@ -156,6 +163,40 @@ export default function Planning({
           Annuler
         </Button>
       </div>
+
+      {confirmDemarrer && (
+        <div className="fixed inset-0 z-20 flex items-end justify-center bg-black/40 p-4">
+          <Card className="w-full max-w-md">
+            <p className="text-lg font-bold">Commencer « {courante.nom} » maintenant ?</p>
+            <p className="mt-1 text-sm text-charcoal/60">
+              L&apos;étape démarre tout de suite (au lieu de {formatHeure(courante.debut)}) et le
+              reste du planning est avancé. Service estimé :{" "}
+              <strong>
+                {formatJourHeure(projeterServiceDepuisDebut(session, session.etape_courante, now))}
+              </strong>
+              .
+            </p>
+            <div className="mt-4 flex gap-3">
+              <Button
+                variant="secondary"
+                onClick={() => setConfirmDemarrer(false)}
+                className="flex-1"
+              >
+                Pas encore
+              </Button>
+              <Button
+                onClick={() => {
+                  setConfirmDemarrer(false);
+                  onDemarrer();
+                }}
+                className="flex-1"
+              >
+                Commencer
+              </Button>
+            </div>
+          </Card>
+        </div>
+      )}
 
       {confirmValider && (
         <div className="fixed inset-0 z-20 flex items-end justify-center bg-black/40 p-4">

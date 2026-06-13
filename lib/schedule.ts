@@ -120,6 +120,43 @@ export function projeterService(session: Session, index: number, now: Date): str
   return new Date(cursor).toISOString();
 }
 
+/** Heure de service projetée si l'étape `index` démarre à `now` (inclut sa propre durée). */
+export function projeterServiceDepuisDebut(session: Session, index: number, now: Date): string {
+  let cursor = now.getTime();
+  for (let i = index; i < session.etapes.length; i++) {
+    cursor += session.etapes[i].dureeMin * 60_000;
+  }
+  return new Date(cursor).toISOString();
+}
+
+/**
+ * Démarre l'étape `index` « maintenant » : son début est calé à `now` et toutes les étapes
+ * suivantes sont recalculées en cascade. Permet de lancer une étape « à venir » sans attendre
+ * son heure planifiée. L'heure de service est mise à jour.
+ */
+export function demarrerEtape(session: Session, index: number, now: Date): Session {
+  if (index < 0 || index >= session.etapes.length) return session;
+  const etapes = session.etapes.map((e) => ({ ...e }));
+
+  let cursor = now.getTime();
+  for (let i = index; i < etapes.length; i++) {
+    const debut = cursor;
+    const fin = debut + etapes[i].dureeMin * 60_000;
+    etapes[i].debut = new Date(debut).toISOString();
+    etapes[i].fin = new Date(fin).toISOString();
+    cursor = fin;
+  }
+
+  const heure_service = etapes[etapes.length - 1].fin;
+  const withStat = etapes.map((e) => ({ ...e, statut: statutEtape(e, now) }));
+  return {
+    ...session,
+    etapes: withStat,
+    heure_service,
+    etape_courante: indexEtapeCourante(withStat, now),
+  };
+}
+
 /** Construit une session complète à partir des paramètres de configuration. */
 export function creerSession(
   protocole: Protocole,

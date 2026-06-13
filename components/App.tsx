@@ -4,7 +4,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import type { AdminConfig, EtapeCalculee, Session } from "@/lib/types";
 import { DEFAULT_ADMIN_CONFIG, loadAdminConfig } from "@/lib/config";
 import { clearSession, loadSession, saveSession } from "@/lib/storage";
-import { validerEtape, withStatuts } from "@/lib/schedule";
+import { demarrerEtape, validerEtape, withStatuts } from "@/lib/schedule";
 import {
   annulerNotifications,
   enregistrerServiceWorker,
@@ -105,6 +105,15 @@ export default function App() {
     if (permissionActuelle() === "granted") planifierNotifications(updated);
   }, [session]);
 
+  const demarrerEtapeCourante = useCallback(() => {
+    if (!session) return;
+    const updated = demarrerEtape(session, session.etape_courante, new Date());
+    prevEtapeRef.current = updated.etape_courante;
+    setSession(updated);
+    saveSession(updated);
+    if (permissionActuelle() === "granted") planifierNotifications(updated);
+  }, [session]);
+
   const sauvegarderConfig = useCallback((c: AdminConfig) => {
     setConfig(c);
   }, []);
@@ -145,6 +154,7 @@ export default function App() {
           onAnnuler={annulerSession}
           onAdmin={() => setScreen("admin")}
           onValider={validerEtapeCourante}
+          onDemarrer={demarrerEtapeCourante}
         />
       )}
 
