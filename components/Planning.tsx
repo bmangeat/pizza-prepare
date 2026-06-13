@@ -118,6 +118,11 @@ export default function Planning({
           const done = e.statut === "done";
           const current = e.statut === "current";
           const last = i === session.etapes.length - 1;
+          // En-tête de jour quand l'étape change de date (prépa étalée sur plusieurs jours).
+          const nouveauJour =
+            i === 0 ||
+            new Date(e.debut).toDateString() !==
+              new Date(session.etapes[i - 1].debut).toDateString();
           return (
             <div key={e.index} className="flex gap-3">
               <div className="flex flex-col items-center">
@@ -137,6 +142,11 @@ export default function Planning({
                 )}
               </div>
               <div className={`pb-5 ${current ? "" : "opacity-80"}`}>
+                {nouveauJour && (
+                  <div className="mb-1 text-xs font-bold uppercase tracking-wide text-charcoal/40">
+                    {formatJour(e.debut)}
+                  </div>
+                )}
                 <div className="flex items-center gap-2">
                   <span className="font-semibold">{e.nom}</span>
                   {current && (
