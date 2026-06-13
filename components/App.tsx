@@ -4,7 +4,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import type { AdminConfig, EtapeCalculee, Session } from "@/lib/types";
 import { DEFAULT_ADMIN_CONFIG, loadAdminConfig } from "@/lib/config";
 import { clearSession, loadSession, saveSession } from "@/lib/storage";
-import { withStatuts } from "@/lib/schedule";
+import { validerEtape, withStatuts } from "@/lib/schedule";
 import {
   annulerNotifications,
   enregistrerServiceWorker,
@@ -96,6 +96,15 @@ export default function App() {
     setScreen("home");
   }, []);
 
+  const validerEtapeCourante = useCallback(() => {
+    if (!session) return;
+    const updated = validerEtape(session, session.etape_courante, new Date());
+    prevEtapeRef.current = updated.etape_courante; // évite l'overlay (avance déclenchée par l'utilisateur)
+    setSession(updated);
+    saveSession(updated);
+    if (permissionActuelle() === "granted") planifierNotifications(updated);
+  }, [session]);
+
   const sauvegarderConfig = useCallback((c: AdminConfig) => {
     setConfig(c);
   }, []);
@@ -135,6 +144,7 @@ export default function App() {
           onRecette={() => setScreen("recipe")}
           onAnnuler={annulerSession}
           onAdmin={() => setScreen("admin")}
+          onValider={validerEtapeCourante}
         />
       )}
 

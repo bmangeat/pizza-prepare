@@ -3,7 +3,8 @@
 import { useState } from "react";
 import type { Session } from "@/lib/types";
 import type { PermissionState } from "@/lib/notifications";
-import { formatCompteARebours, formatHeure, formatJour } from "@/lib/format";
+import { projeterService } from "@/lib/schedule";
+import { formatCompteARebours, formatHeure, formatJour, formatJourHeure } from "@/lib/format";
 import { Banner, Button, Card } from "./ui";
 
 export default function Planning({
@@ -13,6 +14,7 @@ export default function Planning({
   onRecette,
   onAnnuler,
   onAdmin,
+  onValider,
 }: {
   session: Session;
   now: Date;
@@ -20,8 +22,10 @@ export default function Planning({
   onRecette: () => void;
   onAnnuler: () => void;
   onAdmin: () => void;
+  onValider: () => void;
 }) {
   const [confirmAnnuler, setConfirmAnnuler] = useState(false);
+  const [confirmValider, setConfirmValider] = useState(false);
 
   const courante = session.etapes[session.etape_courante];
   const toutTermine = session.etapes.every((e) => e.statut === "done");
@@ -93,6 +97,11 @@ export default function Planning({
               Voir les instructions de pétrissage
             </Button>
           )}
+          {enCours && (
+            <Button onClick={() => setConfirmValider(true)} className="mt-3 w-full">
+              ✓ J&apos;ai terminé — étape suivante
+            </Button>
+          )}
         </Card>
       )}
 
@@ -147,6 +156,46 @@ export default function Planning({
           Annuler
         </Button>
       </div>
+
+      {confirmValider && (
+        <div className="fixed inset-0 z-20 flex items-end justify-center bg-black/40 p-4">
+          <Card className="w-full max-w-md">
+            <p className="text-lg font-bold">Valider « {courante.nom} » ?</p>
+            {session.etape_courante === session.etapes.length - 1 ? (
+              <p className="mt-1 text-sm text-charcoal/60">
+                C&apos;est la dernière étape : la préparation sera marquée terminée.
+              </p>
+            ) : (
+              <p className="mt-1 text-sm text-charcoal/60">
+                L&apos;étape suivante démarre maintenant et le reste du planning est avancé. Service
+                estimé :{" "}
+                <strong>
+                  {formatJourHeure(projeterService(session, session.etape_courante, now))}
+                </strong>
+                .
+              </p>
+            )}
+            <div className="mt-4 flex gap-3">
+              <Button
+                variant="secondary"
+                onClick={() => setConfirmValider(false)}
+                className="flex-1"
+              >
+                Pas encore
+              </Button>
+              <Button
+                onClick={() => {
+                  setConfirmValider(false);
+                  onValider();
+                }}
+                className="flex-1"
+              >
+                Valider
+              </Button>
+            </div>
+          </Card>
+        </div>
+      )}
 
       {confirmAnnuler && (
         <div className="fixed inset-0 z-20 flex items-end justify-center bg-black/40 p-4">

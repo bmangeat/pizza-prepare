@@ -75,6 +75,51 @@ export function withStatuts(session: Session, now: Date): Session {
   };
 }
 
+/**
+ * Valide une étape « maintenant » : elle se termine à `now`, l'étape suivante démarre
+ * immédiatement et toutes les étapes suivantes sont recalculées en cascade (durées préservées).
+ * L'heure de service est mise à jour en conséquence. Décale plus tôt (ou plus tard si l'étape
+ * a débordé), jamais ne modifie les étapes déjà terminées avant `index`.
+ */
+export function validerEtape(session: Session, index: number, now: Date): Session {
+  if (index < 0 || index >= session.etapes.length) return session;
+  const etapes = session.etapes.map((e) => ({ ...e }));
+
+  let cursor = now.getTime();
+  // L'étape validée se termine maintenant.
+  etapes[index].fin = new Date(cursor).toISOString();
+  if (new Date(etapes[index].debut).getTime() > cursor) {
+    etapes[index].debut = new Date(cursor).toISOString();
+  }
+
+  // Cascade des étapes suivantes à partir de maintenant.
+  for (let i = index + 1; i < etapes.length; i++) {
+    const debut = cursor;
+    const fin = debut + etapes[i].dureeMin * 60_000;
+    etapes[i].debut = new Date(debut).toISOString();
+    etapes[i].fin = new Date(fin).toISOString();
+    cursor = fin;
+  }
+
+  const heure_service = etapes[etapes.length - 1].fin;
+  const withStat = etapes.map((e) => ({ ...e, statut: statutEtape(e, now) }));
+  return {
+    ...session,
+    etapes: withStat,
+    heure_service,
+    etape_courante: indexEtapeCourante(withStat, now),
+  };
+}
+
+/** Heure de service projetée si l'étape `index` est validée à `now` (sans muter la session). */
+export function projeterService(session: Session, index: number, now: Date): string {
+  let cursor = now.getTime();
+  for (let i = index + 1; i < session.etapes.length; i++) {
+    cursor += session.etapes[i].dureeMin * 60_000;
+  }
+  return new Date(cursor).toISOString();
+}
+
 /** Construit une session complète à partir des paramètres de configuration. */
 export function creerSession(
   protocole: Protocole,
